@@ -11,7 +11,7 @@ import simd
 
 @MainActor
 struct ContentView: View {
-    @State private var tariffPerKWh: Double = 0.30
+
     @State private var statusText: String = "Tap to place an energy label"
     @State private var root = Entity()
     @State private var gazeTracker = GazeTracker()
@@ -20,18 +20,6 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            // Tariff control panel
-            HStack {
-                Text("Tariff ($/kWh)")
-                Slider(value: Binding(
-                    get: { tariffPerKWh },
-                    set: { tariffPerKWh = $0; overlayManager.tariffPerKWh = $0 }
-                ), in: 0.05...0.80)
-                Text(String(format: "%.2f", tariffPerKWh)).monospacedDigit()
-            }
-            .padding(12).background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            
             Text(statusText).font(.footnote).foregroundStyle(.secondary)
             
             RealityView { content, attachments in
@@ -54,7 +42,9 @@ struct ContentView: View {
                         source: overlayManager.currentSource,
                         lastUpdated: overlayManager.lastUpdated,
                         tips: overlayManager.currentTip,
-                        samples: overlayManager.recentSamples
+                        samples: overlayManager.recentSamples,
+                        temperature: overlayManager.currentTemperature, // pass temperature
+                        lumens: overlayManager.currentLumens            // pass lumens
                     )
                 }
             }
@@ -64,7 +54,6 @@ struct ContentView: View {
         }
         .padding(24)
         .task {
-            overlayManager.tariffPerKWh = tariffPerKWh
             await overlayManager.start()
             gazeTracker.onLookAt = { _ in }
         }
@@ -84,11 +73,9 @@ struct ContentView: View {
         return (origin, forward)
     }
     
-    // Replace your placeLabelWithBestEffort() with this:
     private func placeLabelWithBestEffort() {
         guard let scene = root.scene,
               let (origin, forward) = currentCameraPose(in: scene) else {
-            // Last-resort fallback if scene/camera not available yet:
             overlayManager.placeOrUpdateLabel(at: SIMD3<Float>(0, 0, -0.6), in: root)
             statusText = "Placed label in front (fallback)."
             return
@@ -105,7 +92,6 @@ struct ContentView: View {
             return
         }
         
-        // No hit → place 0.6 m in front (world space)
         overlayManager.placeOrUpdateLabel(at: origin + forward * 0.6, in: root)
         statusText = "Placed label in front."
     }

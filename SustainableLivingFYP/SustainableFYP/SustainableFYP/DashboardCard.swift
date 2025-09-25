@@ -16,6 +16,8 @@ struct DashboardCard: View {
     let lastUpdated: Date
     let tips: String
     let samples: [Double]
+    let temperature: Double? // New: temperature in Celsius
+    let lumens: Double?      // New: lumens for lights
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -40,6 +42,19 @@ struct DashboardCard: View {
                 VStack(alignment: .leading) {
                     Text("Source")
                     Text(source).font(.subheadline)
+                }
+            }
+
+            if let temp = temperature {
+                HStack {
+                    Text("Temperature: ")
+                    Text(String(format: "%.1f°C", temp)).font(.title3).monospacedDigit()
+                }
+            }
+            if let lum = lumens {
+                HStack {
+                    Text("Lumens: ")
+                    Text(String(format: "%.0f lm", lum)).font(.title3).monospacedDigit()
                 }
             }
 

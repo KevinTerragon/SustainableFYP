@@ -29,18 +29,37 @@ final class OverlayManager {
     }
 
     private var energyEstimator = EnergyEstimator(tariffPerKWh: 0.30)
-    private let homeKit = HomeKitPower()
+    private let sensorManager = SensorDataManager()
     private let guesser = ObjectGuesser()
 
+    private(set) var currentTemperature: Double? = nil // Celsius
+    private(set) var currentLumens: Double? = nil     // Lumens
+
     func start() async {
-        homeKit.onPowerUpdate = { [weak self] name, watts in
+        sensorManager.onPowerUpdate = { [weak self] name, watts in
             Task { @MainActor in
                 guard let self else { return }
                 self.currentName = name
                 if let w = watts { self.setReading(watts: w, source: "Exact") }
             }
         }
-        homeKit.begin()
+        sensorManager.onTemperatureUpdate = { [weak self] name, temp in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.currentName.lowercased().contains("light") || self.currentName.lowercased().contains("air") || self.currentName.lowercased().contains("ac") {
+                    self.currentTemperature = temp
+                }
+            }
+        }
+        sensorManager.onLumensUpdate = { [weak self] name, lumens in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.currentName.lowercased().contains("light") {
+                    self.currentLumens = lumens
+                }
+            }
+        }
+        sensorManager.start()
     }
 
     func placeOrUpdateLabel(at position: SIMD3<Float>, in root: Entity) {
